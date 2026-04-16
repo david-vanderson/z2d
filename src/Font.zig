@@ -31,9 +31,9 @@ meta: Meta,
 
 /// Errors associated with loading a font from a file.
 pub const LoadFileError = LoadBufferError ||
-    fs.File.OpenError ||
+    Io.File.OpenError ||
     mem.Allocator.Error ||
-    fs.File.ReadError ||
+    Io.File.ReadStreamingError ||
     error{
         /// The amount of bytes read did not match the size of the file.
         BytesReadMismatch,
@@ -49,15 +49,15 @@ pub const LoadFileError = LoadBufferError ||
 ///
 /// The file is read in its entirety into memory. `deinit` must be called to
 /// free the memory when you are finished with the font data.
-pub fn loadFile(alloc: mem.Allocator, filename: []const u8) LoadFileError!Font {
-    const size_raw = (try fs.cwd().statFile(filename)).size;
+pub fn loadFile(alloc: mem.Allocator, io: Io, filename: []const u8) LoadFileError!Font {
+    const size_raw = (try Io.Dir.cwd().statFile(io, filename)).size;
     if (size_raw > 0x7FFFF000) {
         // Our size limit here is a Linux limitation on the maximum size of
         // read (2147479552 bytes).
         return error.FileTooLarge;
     }
     const size: usize = @intCast(size_raw);
-    const file = try fs.cwd().openFile(filename, .{});
+    const file = try Io.Dir.cwd().openFile(io, filename, .{});
     defer file.close();
 
     const buffer = try alloc.alloc(u8, size);
